@@ -278,8 +278,18 @@ export function CalendarView() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })}</h2>
             <div className="flex gap-1">
-              <button className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200"><ChevronLeft className="w-5 h-5" /></button>
-              <button className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200"><ChevronRight className="w-5 h-5" /></button>
+              <button
+                onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
