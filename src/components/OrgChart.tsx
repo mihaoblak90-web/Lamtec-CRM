@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, Building2, ChevronRight, ArrowLeft, Plus, X, Folder, FileText, Calendar, Users, FolderPlus } from 'lucide-react';
-import { companiesData, type Person, type CompanyOrg, sharedMinutes } from '../lib/mockData';
+import { companiesData, type Person, type CompanyOrg } from '../lib/mockData';
 import { cn } from '../lib/utils';
 import { useAppStore } from '../lib/store';
 
