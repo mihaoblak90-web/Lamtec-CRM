@@ -215,7 +215,7 @@ export function OrgChart() {
                 {/* Purchasing Organization */}
                 <div className="flex flex-col items-center">
                   <div className="bg-blue-100 text-blue-900 px-6 py-3 rounded-lg font-semibold text-lg mb-8 border border-blue-200 shadow-sm w-full max-w-md text-center">
-                    Einkaufsorganisation
+                    Purchasing Organization
                   </div>
                   <div className="w-full flex flex-col items-center">
                     {company.purchasing.map((person, index) => (
@@ -234,7 +234,7 @@ export function OrgChart() {
                 {/* Development Organization */}
                 <div className="flex flex-col items-center">
                   <div className="bg-blue-100 text-blue-900 px-6 py-3 rounded-lg font-semibold text-lg mb-8 border border-blue-200 shadow-sm w-full max-w-md text-center">
-                    Entwicklung
+                    Development
                   </div>
                   <div className="w-full flex flex-col items-center">
                     {company.development.map((person, index) => (
