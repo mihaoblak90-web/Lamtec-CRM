@@ -104,3 +104,7 @@ This stack is fast to launch and can later migrate to a consolidated cloud platf
 3. Define a pilot group and success metrics.
 4. Stand up production-grade hosting and monitoring.
 5. Schedule phased rollout and training.
+2. Implement authentication and role-based access.
+3. Define a pilot group and success metrics.
+4. Stand up production-grade hosting and monitoring.
+5. Schedule phased rollout and training.
