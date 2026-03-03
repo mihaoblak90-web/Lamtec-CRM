@@ -128,8 +128,7 @@ const downloadIcs = (fileName: string, visits: Visit[]) => {
 export function CalendarView() {
   const [view, setView] = useState<'Upcoming' | 'Past'>('Upcoming');
   const [displayMode, setDisplayMode] = useState<'list' | 'map'>('list');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
 
   const [allVisits, setAllVisits] = useState<Visit[]>(initialVisits);
   const [activeTypes, setActiveTypes] = useState<Record<string, boolean>>({
@@ -179,33 +178,10 @@ export function CalendarView() {
     [allVisits],
   );
 
-  const monthLabel = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  const calendarDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstWeekdayMondayBased = (firstDay.getDay() + 6) % 7;
-
-    return Array.from({ length: 42 }, (_, index) => {
-      const dayNumber = index - firstWeekdayMondayBased + 1;
-      if (dayNumber < 1 || dayNumber > daysInMonth) return null;
-      const date = new Date(year, month, dayNumber);
-      const dateKey = date.toISOString().split('T')[0];
-      return { dayNumber, dateKey };
-    });
-  }, [currentMonth]);
-
-  const visitDatesInMonth = useMemo(() => {
-    const monthPrefix = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-    return new Set(allVisits.filter((visit) => visit.date.startsWith(monthPrefix)).map((visit) => visit.date));
-  }, [allVisits, currentMonth]);
-
   const visits = useMemo(() => {
     const source = view === 'Upcoming' ? upcomingVisits : pastVisits;
     return source.filter((visit) => {
-      const datePass = selectedDate ? visit.date === selectedDate : true;
+      const datePass = selectedDate ? new Date(visit.date).getDate() === selectedDate : true;
       const typePass = activeTypes[visit.type] ?? true;
       return datePass && typePass;
     });
@@ -300,7 +276,7 @@ export function CalendarView() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row overflow-hidden min-h-[700px]">
         <div className="w-full lg:w-80 border-r border-slate-200 p-6 bg-slate-50/50">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">{monthLabel}</h2>
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })}</h2>
             <div className="flex gap-1">
               <button
                 onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
@@ -321,34 +297,18 @@ export function CalendarView() {
             {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((day) => (
               <div key={day} className="font-medium text-slate-500 py-1">{day}</div>
             ))}
-            {calendarDays.map((day, index) => {
-              if (!day) {
-                return <div key={`empty-${index}`} className="py-1.5" />;
-              }
-
-              const hasVisit = visitDatesInMonth.has(day.dateKey);
-              const isSelected = selectedDate === day.dateKey;
-
-              return (
-                <button
-                  key={day.dateKey}
-                  onClick={() => setSelectedDate((prev) => (prev === day.dateKey ? null : day.dateKey))}
-                  className={cn(
-                    'py-1.5 rounded-full transition-colors relative',
-                    isSelected ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 hover:bg-slate-200',
-                  )}
-                  title={hasVisit ? 'Visit scheduled' : undefined}
-                >
-                  {day.dayNumber}
-                  {hasVisit && (
-                    <span
-                      className={cn('absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white' : 'bg-emerald-500')}
-                      aria-hidden
-                    />
-                  )}
-                </button>
-              );
-            })}
+            {Array.from({ length: 31 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedDate((prev) => (prev === i + 1 ? null : i + 1))}
+                className={cn(
+                  'py-1.5 rounded-full transition-colors',
+                  selectedDate === i + 1 ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 hover:bg-slate-200',
+                )}
+              >
+                {i + 1}
+              </button>
+            ))}
           </div>
 
           <div className="space-y-4">
