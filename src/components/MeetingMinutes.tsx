@@ -8,15 +8,36 @@ import {
   ChevronRight,
   Download,
   X,
-  Upload
+  Upload,
+  Link as LinkIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAppStore, type MeetingMinute } from '../lib/store';
+
+type VisitOption = {
+  id: number;
+  title: string;
+  company: string;
+  date: string;
+  attendees: string[];
+};
+
+const VISITS_STORAGE_KEY = 'lamtec-visits-calendar-v1';
 
 export function MeetingMinutes() {
   const [searchTerm, setSearchTerm] = useState('');
   const meetingMinutes = useAppStore(state => state.meetingMinutes);
   const addMeetingMinute = useAppStore(state => state.addMeetingMinute);
+  const [availableVisits] = useState<VisitOption[]>(() => {
+    try {
+      const raw = localStorage.getItem(VISITS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as VisitOption[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -27,7 +48,8 @@ export function MeetingMinutes() {
     company: '',
     date: '',
     attendees: '',
-    status: 'Finalized' as 'Draft' | 'Finalized'
+    status: 'Finalized' as 'Draft' | 'Finalized',
+    linkedVisitId: ''
   });
   const [minutesType, setMinutesType] = useState<'text' | 'file'>('text');
   const [minutesContent, setMinutesContent] = useState('');
@@ -36,11 +58,13 @@ export function MeetingMinutes() {
 
   const filteredMinutes = meetingMinutes.filter(m => 
     m.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.company.toLowerCase().includes(searchTerm.toLowerCase())
+    m.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (m.visitTitle || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddMinutes = (e: React.FormEvent) => {
     e.preventDefault();
+    const linkedVisit = availableVisits.find((visit) => String(visit.id) === newMinute.linkedVisitId);
     
     addMeetingMinute({
       id: Date.now(),
@@ -53,11 +77,13 @@ export function MeetingMinutes() {
       type: minutesType,
       content: minutesType === 'text' ? minutesContent : undefined,
       fileName: minutesType === 'file' && minutesFile ? minutesFile.name : undefined,
-      fileSize: minutesType === 'file' && minutesFile ? `${(minutesFile.size / 1024 / 1024).toFixed(2)} MB` : undefined
+      fileSize: minutesType === 'file' && minutesFile ? `${(minutesFile.size / 1024 / 1024).toFixed(2)} MB` : undefined,
+      visitId: linkedVisit?.id,
+      visitTitle: linkedVisit?.title
     });
 
     setIsNewModalOpen(false);
-    setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized' });
+    setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized', linkedVisitId: '' });
     setMinutesContent('');
     setMinutesFile(null);
   };
@@ -132,6 +158,12 @@ export function MeetingMinutes() {
                     <FileText className="w-4 h-4 text-slate-400" />
                     {meeting.company}
                   </div>
+                  {meeting.visitTitle && (
+                    <div className="flex items-center gap-1.5 font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
+                      <LinkIcon className="w-4 h-4 text-blue-500" />
+                      Linked to: {meeting.visitTitle}
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-slate-400" />
                     {meeting.date}
@@ -172,7 +204,7 @@ export function MeetingMinutes() {
               <button 
                 onClick={() => {
                   setIsNewModalOpen(false);
-                  setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized' });
+                  setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized', linkedVisitId: '' });
                   setMinutesContent('');
                   setMinutesFile(null);
                 }}
@@ -215,6 +247,32 @@ export function MeetingMinutes() {
                     onChange={e => setNewMinute({...newMinute, date: e.target.value})}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Link to Visit (optional)</label>
+                  <select
+                    value={newMinute.linkedVisitId}
+                    onChange={e => {
+                      const linkedVisit = availableVisits.find((visit) => String(visit.id) === e.target.value);
+                      setNewMinute({
+                        ...newMinute,
+                        linkedVisitId: e.target.value,
+                        title: linkedVisit ? linkedVisit.title : newMinute.title,
+                        company: linkedVisit ? linkedVisit.company : newMinute.company,
+                        date: linkedVisit ? linkedVisit.date : newMinute.date,
+                        attendees: linkedVisit ? linkedVisit.attendees.join(', ') : newMinute.attendees
+                      });
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="">No linked visit</option>
+                    {availableVisits.map((visit) => (
+                      <option key={visit.id} value={visit.id}>
+                        {visit.date} • {visit.title} • {visit.company}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">If selected, the minute will be connected to the visit from the Visits Calendar.</p>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Attendees (comma separated)</label>
@@ -314,7 +372,7 @@ export function MeetingMinutes() {
                   type="button"
                   onClick={() => {
                     setIsNewModalOpen(false);
-                    setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized' });
+                    setNewMinute({ title: '', company: '', date: '', attendees: '', status: 'Finalized', linkedVisitId: '' });
                     setMinutesContent('');
                     setMinutesFile(null);
                   }}
@@ -372,6 +430,12 @@ export function MeetingMinutes() {
                     <Calendar className="w-4 h-4 text-slate-400" />
                     {selectedMinute.date}
                   </div>
+                  {selectedMinute.visitTitle && (
+                    <div className="flex items-center gap-2 col-span-2 text-blue-700">
+                      <LinkIcon className="w-4 h-4 text-blue-500" />
+                      Linked visit: {selectedMinute.visitTitle}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 col-span-2">
                     <Users className="w-4 h-4 text-slate-400" />
                     {selectedMinute.attendees.join(', ')}

@@ -241,12 +241,14 @@ export function CalendarView() {
   };
 
   const addMeetingMinute = useAppStore((state) => state.addMeetingMinute);
+  const meetingMinutes = useAppStore((state) => state.meetingMinutes);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [isMinutesModalOpen, setIsMinutesModalOpen] = useState(false);
   const [minutesType, setMinutesType] = useState<'text' | 'file'>('text');
   const [minutesContent, setMinutesContent] = useState('');
   const [minutesFile, setMinutesFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const getLinkedMinutesForVisit = (visitId: number) => meetingMinutes.filter((minute) => minute.visitId === visitId);
 
   const handleAddMinutes = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,6 +266,8 @@ export function CalendarView() {
       content: minutesType === 'text' ? minutesContent : undefined,
       fileName: minutesType === 'file' && minutesFile ? minutesFile.name : undefined,
       fileSize: minutesType === 'file' && minutesFile ? `${(minutesFile.size / 1024 / 1024).toFixed(2)} MB` : undefined,
+      visitId: selectedVisit.id,
+      visitTitle: selectedVisit.title,
     });
 
     setIsMinutesModalOpen(false);
@@ -384,7 +388,11 @@ export function CalendarView() {
 
           {displayMode === 'list' ? (
             <div className="space-y-4">
-              {visits.map((visit) => (
+              {visits.map((visit) => {
+                const linkedMinutes = getLinkedMinutesForVisit(visit.id);
+                const hasLinkedMinutes = linkedMinutes.length > 0;
+
+                return (
                 <div key={visit.id} className="flex flex-col gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all bg-white group">
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-slate-50 border border-slate-100 shrink-0">
@@ -407,12 +415,29 @@ export function CalendarView() {
                         <div className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-slate-400" />{visit.time}</div>
                         <div className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" />{visit.location}</div>
                         <div className="flex items-center gap-1.5"><Users className="w-4 h-4 text-slate-400" />{visit.attendees.length} Attendees</div>
+                        <div className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-md",
+                          hasLinkedMinutes ? "text-emerald-700 bg-emerald-50" : "text-slate-500 bg-slate-50"
+                        )}>
+                          <FileText className="w-4 h-4" />
+                          {hasLinkedMinutes ? `${linkedMinutes.length} linked minute${linkedMinutes.length > 1 ? 's' : ''}` : 'No linked minutes'}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 justify-end">
-                    <button onClick={() => handleDetailsClick(visit)} className="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors">Details / Minutes</button>
+                    <button
+                      onClick={() => handleDetailsClick(visit)}
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium border rounded-lg transition-colors",
+                        hasLinkedMinutes
+                          ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200"
+                          : "text-slate-600 bg-slate-50 hover:bg-slate-100 border-slate-200"
+                      )}
+                    >
+                      {hasLinkedMinutes ? 'Add / View Minutes' : 'Add Minutes'}
+                    </button>
                     <a href={buildOutlookLink(visit)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
                       <ExternalLink className="w-4 h-4" /> Add to Outlook
                     </a>
@@ -421,7 +446,8 @@ export function CalendarView() {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
               {visits.length === 0 && <div className="text-center py-12 text-slate-500">No visits found for this view/filter.</div>}
             </div>
           ) : (
@@ -521,6 +547,23 @@ export function CalendarView() {
                   <div className="flex items-center gap-2 col-span-2"><Users className="w-4 h-4 text-slate-400" />{selectedVisit.attendees.join(', ')}</div>
                 </div>
               </div>
+
+              {getLinkedMinutesForVisit(selectedVisit.id).length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-2">Already linked minutes</h4>
+                  <div className="space-y-2">
+                    {getLinkedMinutesForVisit(selectedVisit.id).map((minute) => (
+                      <div key={minute.id} className="flex items-center justify-between text-sm">
+                        <div>
+                          <div className="font-medium text-slate-900">{minute.title}</div>
+                          <div className="text-slate-500">{minute.status} • {minute.date}</div>
+                        </div>
+                        <div className="text-blue-700 font-medium">{minute.type === 'file' ? 'File note' : 'Text note'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex gap-4 border-b border-slate-200">
