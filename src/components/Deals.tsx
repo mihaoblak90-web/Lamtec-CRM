@@ -10,11 +10,35 @@ import {
   List,
   LayoutGrid,
   Download,
-  Upload
+  Upload,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { cn } from '../lib/utils';
 import { initialDealsData, Deal } from '../lib/mockData';
+
+const stageOrder = ['lead', 'qualified', 'proposal', 'negotiation', 'won'] as const;
+
+const stageRequirements: Record<string, (keyof Deal)[]> = {
+  qualified: ['nextStep', 'nextStepDueDate'],
+  proposal: ['nextStep', 'nextStepDueDate', 'responsibleSales'],
+  negotiation: ['nextStep', 'nextStepDueDate', 'responsibleSales', 'offerDueDate'],
+  won: ['nextStep', 'nextStepDueDate', 'responsibleSales', 'offerDate'],
+};
+
+const fieldLabels: Record<string, string> = {
+  nextStep: 'Next step',
+  nextStepDueDate: 'Next step due date',
+  responsibleSales: 'Responsible sales',
+  offerDueDate: 'Offer due date',
+  offerDate: 'Offer date',
+};
+
+const getMissingStageFields = (deal: Partial<Deal>, stage: string): string[] => {
+  const requiredFields = stageRequirements[stage] || [];
+  return requiredFields.filter((field) => !String(deal[field] || '').trim()) as string[];
+};
 
 const initialColumns = [
   { id: 'lead', title: 'Lead', color: 'bg-slate-200 text-slate-700' },
@@ -28,6 +52,7 @@ export function Deals() {
   const [deals, setDeals] = useState<Deal[]>(initialDealsData);
   const [draggedDealId, setDraggedDealId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [governanceMessage, setGovernanceMessage] = useState<string | null>(null);
   
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -48,7 +73,10 @@ export function Deals() {
     totalProjectValue: 0,
     offerDueDate: '',
     offerNumber: '',
-    offerDate: ''
+    offerDate: '',
+    nextStep: '',
+    nextStepOwner: '',
+    nextStepDueDate: ''
   });
 
   // Drag and Drop Handlers
@@ -67,17 +95,42 @@ export function Deals() {
     e.preventDefault();
     if (draggedDealId === null) return;
 
+    const draggedDeal = deals.find((deal) => deal.id === draggedDealId);
+    if (!draggedDeal) return;
+
+    const currentIndex = stageOrder.indexOf((draggedDeal.stage as (typeof stageOrder)[number]) || 'lead');
+    const nextIndex = stageOrder.indexOf((stageId as (typeof stageOrder)[number]) || 'lead');
+
+    if (nextIndex > currentIndex) {
+      const missingFields = getMissingStageFields(draggedDeal, stageId);
+      if (missingFields.length > 0) {
+        const missingLabels = missingFields.map((field) => fieldLabels[field] || field).join(', ');
+        setGovernanceMessage(`Deal cannot move to ${stageId.toUpperCase()} yet. Missing: ${missingLabels}.`);
+        setDraggedDealId(null);
+        return;
+      }
+    }
+
     setDeals(prevDeals => 
       prevDeals.map(deal => 
         deal.id === draggedDealId ? { ...deal, stage: stageId } : deal
       )
     );
+    setGovernanceMessage(null);
     setDraggedDealId(null);
   };
 
   // Add Deal Handler
   const handleAddDeal = (e: React.FormEvent) => {
     e.preventDefault();
+    const selectedStage = newDeal.stage || 'lead';
+    const missingFields = getMissingStageFields(newDeal, selectedStage);
+    if (missingFields.length > 0) {
+      const missingLabels = missingFields.map((field) => fieldLabels[field] || field).join(', ');
+      setGovernanceMessage(`Deal in stage ${selectedStage.toUpperCase()} is missing: ${missingLabels}.`);
+      return;
+    }
+
     const dealToAdd: Deal = {
       id: Date.now(),
       title: newDeal.title || '',
@@ -96,17 +149,21 @@ export function Deals() {
       totalProjectValue: Number(newDeal.totalProjectValue) || 0,
       offerDueDate: newDeal.offerDueDate || '',
       offerNumber: newDeal.offerNumber || '',
-      offerDate: newDeal.offerDate || ''
+      offerDate: newDeal.offerDate || '',
+      nextStep: newDeal.nextStep || '',
+      nextStepOwner: newDeal.nextStepOwner || '',
+      nextStepDueDate: newDeal.nextStepDueDate || ''
     };
 
     setDeals([...deals, dealToAdd]);
     setIsAddModalOpen(false);
+    setGovernanceMessage(null);
     // Reset form
     setNewDeal({
       title: '', company: '', segment: 'Automotive', stage: 'lead', probability: 20,
       rfqNumber: '', rfqDate: '', responsibleSales: '', responsibleRnD: '',
       peakYearQuantity: 0, peakYearSales: 0, hidriaInvestment: 0, customerOrderEquip: 0, totalProjectValue: 0,
-      offerDueDate: '', offerNumber: '', offerDate: ''
+      offerDueDate: '', offerNumber: '', offerDate: '', nextStep: '', nextStepOwner: '', nextStepDueDate: ''
     });
   };
 
@@ -155,7 +212,10 @@ export function Deals() {
           totalProjectValue: Number(row.totalProjectValue) || 0,
           offerDueDate: row.offerDueDate || '',
           offerNumber: row.offerNumber || '',
-          offerDate: row.offerDate || ''
+          offerDate: row.offerDate || '',
+          nextStep: row.nextStep || '',
+          nextStepOwner: row.nextStepOwner || '',
+          nextStepDueDate: row.nextStepDueDate || ''
         }));
 
         setDeals(prevDeals => {
@@ -247,6 +307,19 @@ export function Deals() {
         </div>
       </div>
 
+      {governanceMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">{governanceMessage}</div>
+          <button
+            onClick={() => setGovernanceMessage(null)}
+            className="text-amber-700 hover:text-amber-900"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {viewMode === 'kanban' ? (
         <div className="flex-1 overflow-x-auto pb-4">
           <div className="flex gap-6 h-full min-w-max">
@@ -314,9 +387,14 @@ export function Deals() {
                           {deal.company}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2">
                           <FileText className="w-3.5 h-3.5" />
                           RFQ: {deal.rfqNumber || 'N/A'}
+                        </div>
+
+                        <div className="text-xs text-slate-600 bg-slate-50 rounded-md px-2 py-1.5">
+                          <span className="font-medium">Next step:</span> {deal.nextStep || 'Missing'}
+                          {deal.nextStepDueDate ? ` • due ${deal.nextStepDueDate}` : ''}
                         </div>
 
                         <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
@@ -377,6 +455,7 @@ export function Deals() {
                   <th className="px-6 py-4">Value</th>
                   <th className="px-6 py-4">Probability</th>
                   <th className="px-6 py-4">Expected Close</th>
+                  <th className="px-6 py-4">Next Step</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -424,6 +503,12 @@ export function Deals() {
                       </td>
                       <td className="px-6 py-4 text-slate-500">
                         {deal.offerDueDate || 'No Date'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="inline-flex items-center gap-1.5">
+                          {deal.nextStep ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                          <span className="text-slate-700">{deal.nextStep || 'Missing next step'}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button 
@@ -517,6 +602,24 @@ export function Deals() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Responsible R&D</label>
                     <input type="text" value={newDeal.responsibleRnD} onChange={e => setNewDeal({...newDeal, responsibleRnD: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Execution Discipline</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Next Step</label>
+                    <input type="text" value={newDeal.nextStep} onChange={e => setNewDeal({...newDeal, nextStep: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Confirm technical scope with buyer" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Next Step Owner</label>
+                    <input type="text" value={newDeal.nextStepOwner} onChange={e => setNewDeal({...newDeal, nextStepOwner: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Owner" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Next Step Due Date</label>
+                    <input type="date" value={newDeal.nextStepDueDate} onChange={e => setNewDeal({...newDeal, nextStepDueDate: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 </div>
               </section>
