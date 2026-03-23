@@ -124,18 +124,33 @@ export function MeetingMinutes() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-800 p-6 text-white shadow-lg">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">
+              Notes hub
+            </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight">Meeting Minutes</h1>
+            <p className="mt-2 max-w-2xl text-sm text-blue-50/85">Review saved notes, jump into full details by clicking the card, and manage visit-linked documentation from one place.</p>
+          </div>
+          <button 
+            onClick={() => setIsNewModalOpen(true)}
+            className="inline-flex items-center gap-2 self-start rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-blue-50 sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            New Minutes
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Meeting Minutes</h1>
-          <p className="text-sm text-slate-500 mt-1">Log and review meeting notes and decisions.</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Minutes overview</h2>
+          <p className="text-sm text-slate-500 mt-1">Search, filter, and click any minute card to open the full meeting details.</p>
         </div>
-        <button 
-          onClick={() => setIsNewModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          New Minutes
-        </button>
+        <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+          Click a minute card anywhere to open it
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -207,7 +222,19 @@ export function MeetingMinutes() {
             </div>
           )}
           {filteredMinutes.map((meeting) => (
-            <div key={meeting.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors group flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+            <div
+              key={meeting.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleViewDetails(meeting)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleViewDetails(meeting);
+                }
+              }}
+              className="group flex cursor-pointer flex-col gap-6 border-l-4 border-transparent p-4 transition-all hover:border-blue-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:flex-row sm:items-center sm:p-6"
+            >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-base font-semibold text-slate-900 truncate">{meeting.title}</h3>
@@ -245,13 +272,19 @@ export function MeetingMinutes() {
               
               <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto justify-end">
                 <button 
-                  onClick={() => handleDownload(meeting)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(meeting);
+                  }}
                   className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors" title="Download PDF"
                 >
                   <Download className="w-5 h-5" />
                 </button>
                 <button 
-                  onClick={() => handleViewDetails(meeting)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewDetails(meeting);
+                  }}
                   className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
                 >
                   View Details

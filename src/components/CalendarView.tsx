@@ -303,21 +303,36 @@ export function CalendarView() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 p-6 text-white shadow-lg">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">
+              Field planning
+            </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight">Visits Calendar</h1>
+            <p className="mt-2 max-w-2xl text-sm text-blue-50/85">Plan customer visits, open the meeting flow directly from each card, and keep minutes connected to the actual visit.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => downloadIcs('lamtec-upcoming-visits.ics', upcomingVisits)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+            >
+              <Download className="w-4 h-4" /> Export Upcoming (.ics)
+            </button>
+            <button onClick={() => setIsScheduleModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-blue-50">
+              <Plus className="w-4 h-4" /> Schedule Visit
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Visits Calendar</h1>
-          <p className="text-sm text-slate-500 mt-1">Schedule and manage customer visits, then sync them with Outlook.</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Visit overview</h2>
+          <p className="text-sm text-slate-500 mt-1">Filter by date/type and open a visit by clicking the whole card.</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => downloadIcs('lamtec-upcoming-visits.ics', upcomingVisits)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
-          >
-            <Download className="w-4 h-4" /> Export Upcoming (.ics)
-          </button>
-          <button onClick={() => setIsScheduleModalOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Schedule Visit
-          </button>
+        <div className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+          Click a visit card anywhere to open meeting details
         </div>
       </div>
 
@@ -431,7 +446,19 @@ export function CalendarView() {
                 const hasLinkedMinutes = linkedMinutes.length > 0;
 
                 return (
-                <div key={visit.id} className="flex flex-col gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all bg-white group">
+                <div
+                  key={visit.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleDetailsClick(visit)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleDetailsClick(visit);
+                    }
+                  }}
+                  className="flex cursor-pointer flex-col gap-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 group"
+                >
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-slate-50 border border-slate-100 shrink-0">
                       <span className="text-xs font-semibold text-slate-500 uppercase">{new Date(visit.date).toLocaleString('default', { month: 'short' })}</span>
@@ -441,7 +468,7 @@ export function CalendarView() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
                         <h3 className="text-base font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{visit.title}</h3>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-600">{visit.type}</span>
+                        <span className="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-white">{visit.type}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5 font-medium text-slate-700 text-sm mb-3">
@@ -466,7 +493,10 @@ export function CalendarView() {
 
                   <div className="flex flex-wrap items-center gap-2 justify-end">
                     <button
-                      onClick={() => handleDetailsClick(visit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDetailsClick(visit);
+                      }}
                       className={cn(
                         "px-3 py-2 text-sm font-medium border rounded-lg transition-colors",
                         hasLinkedMinutes
@@ -476,10 +506,22 @@ export function CalendarView() {
                     >
                       {hasLinkedMinutes ? 'Add / View Minutes' : 'Add Minutes'}
                     </button>
-                    <a href={buildOutlookLink(visit)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
+                    <a
+                      href={buildOutlookLink(visit)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                    >
                       <ExternalLink className="w-4 h-4" /> Add to Outlook
                     </a>
-                    <button onClick={() => downloadIcs(`visit-${visit.id}.ics`, [visit])} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadIcs(`visit-${visit.id}.ics`, [visit]);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors"
+                    >
                       <Download className="w-4 h-4" /> ICS
                     </button>
                   </div>
@@ -502,6 +544,13 @@ export function CalendarView() {
                           <p className="flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> {visit.date}</p>
                           <p className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {visit.location}</p>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDetailsClick(visit)}
+                          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                        >
+                          Open visit
+                        </button>
                       </div>
                     </Popup>
                   </Marker>
