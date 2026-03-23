@@ -19,7 +19,7 @@ import { cn } from '../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useAppStore } from '../lib/store';
+import { useAppStore, type MeetingMinute } from '../lib/store';
 
 type Visit = {
   id: number;
@@ -249,6 +249,22 @@ export function CalendarView() {
   const [minutesFile, setMinutesFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const getLinkedMinutesForVisit = (visitId: number) => meetingMinutes.filter((minute) => minute.visitId === visitId);
+  const renderMinutePreview = (minute: MeetingMinute) => {
+    if (minute.type === 'file') {
+      return (
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+          <div className="font-medium text-slate-900">{minute.fileName || 'Uploaded file'}</div>
+          {minute.fileSize && <div className="text-xs text-slate-500 mt-1">{minute.fileSize}</div>}
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 whitespace-pre-wrap">
+        {minute.content || minute.summary}
+      </div>
+    );
+  };
 
   const handleAddMinutes = (e: React.FormEvent) => {
     e.preventDefault();
@@ -553,12 +569,15 @@ export function CalendarView() {
                   <h4 className="text-sm font-semibold text-blue-900 mb-2">Already linked minutes</h4>
                   <div className="space-y-2">
                     {getLinkedMinutesForVisit(selectedVisit.id).map((minute) => (
-                      <div key={minute.id} className="flex items-center justify-between text-sm">
-                        <div>
-                          <div className="font-medium text-slate-900">{minute.title}</div>
-                          <div className="text-slate-500">{minute.status} • {minute.date}</div>
+                      <div key={minute.id} className="rounded-lg border border-blue-100 bg-white/80 p-3 space-y-3">
+                        <div className="flex items-center justify-between text-sm gap-3">
+                          <div>
+                            <div className="font-medium text-slate-900">{minute.title}</div>
+                            <div className="text-slate-500">{minute.status} • {minute.date}</div>
+                          </div>
+                          <div className="text-blue-700 font-medium shrink-0">{minute.type === 'file' ? 'File note' : 'Text note'}</div>
                         </div>
-                        <div className="text-blue-700 font-medium">{minute.type === 'file' ? 'File note' : 'Text note'}</div>
+                        {renderMinutePreview(minute)}
                       </div>
                     ))}
                   </div>
