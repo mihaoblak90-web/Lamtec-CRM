@@ -209,6 +209,9 @@ export interface Deal {
   offerDueDate: string;
   offerNumber: string;
   offerDate: string;
+  nextStep?: string;
+  nextStepOwner?: string;
+  nextStepDueDate?: string;
 }
 
 export const initialDealsData: Deal[] = [
@@ -231,6 +234,9 @@ export const initialDealsData: Deal[] = [
     offerDueDate: '2026-10-15',
     offerNumber: 'OFF-2026-001',
     offerDate: '2026-02-01',
+    nextStep: 'Send commercial proposal to Siemens sourcing team',
+    nextStepOwner: 'Jane Doe',
+    nextStepDueDate: '2026-03-28',
   },
   {
     id: 2,
@@ -251,6 +257,9 @@ export const initialDealsData: Deal[] = [
     offerDueDate: '2026-11-01',
     offerNumber: '',
     offerDate: '',
+    nextStep: 'Confirm prototype scope with Bosch engineering',
+    nextStepOwner: 'John Smith',
+    nextStepDueDate: '2026-03-24',
   },
   {
     id: 3,
