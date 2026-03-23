@@ -9,7 +9,8 @@ import {
   Download,
   X,
   Upload,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Filter,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAppStore, type MeetingMinute } from '../lib/store';
@@ -26,6 +27,7 @@ const VISITS_STORAGE_KEY = 'lamtec-visits-calendar-v1';
 
 export function MeetingMinutes() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'linked' | 'draft' | 'finalized'>('all');
   const meetingMinutes = useAppStore(state => state.meetingMinutes);
   const addMeetingMinute = useAppStore(state => state.addMeetingMinute);
   const [availableVisits] = useState<VisitOption[]>(() => {
@@ -56,11 +58,24 @@ export function MeetingMinutes() {
   const [minutesFile, setMinutesFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredMinutes = meetingMinutes.filter(m => 
-    m.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.visitTitle || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMinutes = meetingMinutes.filter((m) => {
+    const matchesSearch =
+      m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.visitTitle || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilter =
+      activeFilter === 'all' ||
+      (activeFilter === 'linked' && Boolean(m.visitTitle)) ||
+      (activeFilter === 'draft' && m.status === 'Draft') ||
+      (activeFilter === 'finalized' && m.status === 'Finalized');
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const linkedCount = meetingMinutes.filter((minute) => Boolean(minute.visitTitle)).length;
+  const draftCount = meetingMinutes.filter((minute) => minute.status === 'Draft').length;
+  const finalizedCount = meetingMinutes.filter((minute) => minute.status === 'Finalized').length;
 
   const handleAddMinutes = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +138,24 @@ export function MeetingMinutes() {
         </button>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total minutes</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{meetingMinutes.length}</div>
+          <div className="mt-1 text-sm text-slate-500">All saved meeting records in the workspace.</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Linked to visits</div>
+          <div className="mt-2 text-2xl font-bold text-blue-700">{linkedCount}</div>
+          <div className="mt-1 text-sm text-slate-500">Minutes connected to a Visits Calendar record.</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Status mix</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{finalizedCount} finalized / {draftCount} draft</div>
+          <div className="mt-1 text-sm text-slate-500">Quick overview of completion across notes.</div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative w-full sm:w-72">
@@ -135,9 +168,44 @@ export function MeetingMinutes() {
               className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 mr-1">
+              <Filter className="w-4 h-4" />
+              Filter
+            </div>
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'linked', label: 'Linked' },
+              { id: 'draft', label: 'Draft' },
+              { id: 'finalized', label: 'Finalized' },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setActiveFilter(filter.id as typeof activeFilter)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  activeFilter === filter.id
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="divide-y divide-slate-100">
+          {filteredMinutes.length === 0 && (
+            <div className="p-10 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                <FileText className="w-6 h-6 text-slate-500" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">No meeting minutes found</h3>
+              <p className="mt-1 text-sm text-slate-500">Try another search term or filter, or create a new minute.</p>
+            </div>
+          )}
           {filteredMinutes.map((meeting) => (
             <div key={meeting.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors group flex flex-col sm:flex-row gap-6 items-start sm:items-center">
               <div className="flex-1 min-w-0">
@@ -151,7 +219,7 @@ export function MeetingMinutes() {
                   </span>
                 </div>
                 
-                <p className="text-sm text-slate-600 mb-4 line-clamp-2">{meeting.summary}</p>
+                <p className="text-sm text-slate-600 mb-4 line-clamp-2">{meeting.content || meeting.summary}</p>
                 
                 <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                   <div className="flex items-center gap-1.5 font-medium text-slate-700">

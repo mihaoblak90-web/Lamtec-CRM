@@ -14,6 +14,7 @@ import {
   Upload,
   Download,
   ExternalLink,
+  Eye,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -243,6 +244,7 @@ export function CalendarView() {
   const addMeetingMinute = useAppStore((state) => state.addMeetingMinute);
   const meetingMinutes = useAppStore((state) => state.meetingMinutes);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
+  const [selectedLinkedMinute, setSelectedLinkedMinute] = useState<MeetingMinute | null>(null);
   const [isMinutesModalOpen, setIsMinutesModalOpen] = useState(false);
   const [minutesType, setMinutesType] = useState<'text' | 'file'>('text');
   const [minutesContent, setMinutesContent] = useState('');
@@ -297,6 +299,8 @@ export function CalendarView() {
     setIsMinutesModalOpen(true);
   };
 
+  const linkedMinutesCount = visits.reduce((count, visit) => count + getLinkedMinutesForVisit(visit.id).length, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -314,6 +318,24 @@ export function CalendarView() {
           <button onClick={() => setIsScheduleModalOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <Plus className="w-4 h-4" /> Schedule Visit
           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Visible visits</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{visits.length}</div>
+          <div className="mt-1 text-sm text-slate-500">{view === 'Upcoming' ? 'Upcoming visits in current filter' : 'Past visits in current filter'}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Linked minutes</div>
+          <div className="mt-2 text-2xl font-bold text-emerald-700">{linkedMinutesCount}</div>
+          <div className="mt-1 text-sm text-slate-500">Saved notes connected to the visible visits.</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date focus</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{selectedDate || 'All dates'}</div>
+          <div className="mt-1 text-sm text-slate-500">Use the month calendar to narrow the current visit list.</div>
         </div>
       </div>
 
@@ -551,7 +573,7 @@ export function CalendarView() {
                   <p className="text-sm text-slate-500">Document the outcomes of this visit</p>
                 </div>
               </div>
-              <button onClick={() => { setIsMinutesModalOpen(false); setSelectedVisit(null); setMinutesContent(''); setMinutesFile(null); }} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setIsMinutesModalOpen(false); setSelectedVisit(null); setSelectedLinkedMinute(null); setMinutesContent(''); setMinutesFile(null); }} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
             </div>
 
             <form onSubmit={handleAddMinutes} className="p-6 space-y-6">
@@ -578,6 +600,16 @@ export function CalendarView() {
                           <div className="text-blue-700 font-medium shrink-0">{minute.type === 'file' ? 'File note' : 'Text note'}</div>
                         </div>
                         {renderMinutePreview(minute)}
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLinkedMinute(minute)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View full minute
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -609,10 +641,47 @@ export function CalendarView() {
               </div>
 
               <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button type="button" onClick={() => { setIsMinutesModalOpen(false); setSelectedVisit(null); setMinutesContent(''); setMinutesFile(null); }} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={() => { setIsMinutesModalOpen(false); setSelectedVisit(null); setSelectedLinkedMinute(null); setMinutesContent(''); setMinutesFile(null); }} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
                 <button type="submit" disabled={minutesType === 'text' ? !minutesContent : !minutesFile} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">Save Minutes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedLinkedMinute && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-200 p-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{selectedLinkedMinute.title}</h2>
+                <p className="text-sm text-slate-500">{selectedLinkedMinute.company} • {selectedLinkedMinute.date}</p>
+              </div>
+              <button onClick={() => setSelectedLinkedMinute(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 font-medium", selectedLinkedMinute.status === 'Finalized' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+                  {selectedLinkedMinute.status}
+                </span>
+                {selectedLinkedMinute.visitTitle && (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 font-medium text-blue-700">
+                    Linked to {selectedLinkedMinute.visitTitle}
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
+                {selectedLinkedMinute.type === 'file'
+                  ? `${selectedLinkedMinute.fileName || 'Uploaded file'}${selectedLinkedMinute.fileSize ? ` • ${selectedLinkedMinute.fileSize}` : ''}`
+                  : selectedLinkedMinute.content || selectedLinkedMinute.summary}
+              </div>
+
+              <div className="text-sm text-slate-500">
+                Attendees: {selectedLinkedMinute.attendees.join(', ')}
+              </div>
+            </div>
           </div>
         </div>
       )}
