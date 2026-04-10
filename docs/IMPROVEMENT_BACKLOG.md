@@ -121,7 +121,7 @@ This is a concrete "make it better" plan focused on what matters most for a mode
 
 ## 5) Suggested "do this next" list
 1. Fix all current type errors and enforce CI quality gates.
-2. Implement backend API + Postgres for 4 core entities.
-3. Add SSO + RBAC before broad rollout.
+2. Implement backend API + Postgres rollout for 4 core entities.
+3. Add SSO + RBAC guardrails before broad rollout.
 4. Run a pilot cohort and capture daily feedback.
 5. Build meeting-to-action AI copilot after data model is stable.
