@@ -55,6 +55,7 @@ export function Deals() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [governanceMessage, setGovernanceMessage] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uiMessage, setUiMessage] = useState<string | null>(null);
   
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -218,7 +219,9 @@ export function Deals() {
           title: row.title || 'Unknown Deal',
           company: row.company || 'Unknown Company',
           segment: row.segment || 'Automotive',
-          stage: row.stage || 'lead',
+          stage: stageOrder.includes((row.stage as string)?.toLowerCase() as (typeof stageOrder)[number])
+            ? (row.stage as string).toLowerCase()
+            : 'lead',
           probability: Number(row.probability) || 0,
           rfqNumber: row.rfqNumber || '',
           rfqDate: row.rfqDate || '',
@@ -359,6 +362,19 @@ export function Deals() {
         </div>
       )}
 
+      {uiMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">{uiMessage}</div>
+          <button
+            onClick={() => setUiMessage(null)}
+            className="opacity-80 hover:opacity-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {viewMode === 'kanban' ? (
         <div className="flex-1 overflow-x-auto pb-4">
           <div className="flex gap-6 h-full min-w-max">
@@ -383,7 +399,7 @@ export function Deals() {
                       </span>
                     </div>
                     <button 
-                      onClick={() => alert('Column options coming soon!')}
+                      onClick={() => setUiMessage(`Column options for "${column.title}" are not implemented yet.`)}
                       className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200"
                     >
                       <MoreHorizontal className="w-4 h-4" />
@@ -413,7 +429,7 @@ export function Deals() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              alert('Deal options coming soon!');
+                              setUiMessage(`Deal actions for "${deal.title}" are not implemented yet.`);
                             }}
                             className="text-slate-400 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
@@ -551,7 +567,7 @@ export function Deals() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button 
-                          onClick={() => alert('Deal options coming soon!')}
+                          onClick={() => setUiMessage(`Deal actions for "${deal.title}" are not implemented yet.`)}
                           className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all"
                         >
                           <MoreHorizontal className="w-4 h-4" />
