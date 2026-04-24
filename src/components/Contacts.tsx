@@ -23,6 +23,7 @@ export function Contacts() {
   const [contacts, setContacts] = useState(initialContacts);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [uiMessage, setUiMessage] = useState<string | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,6 +76,9 @@ export function Contacts() {
     const matchesStatus = statusFilter === 'All' || contact.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  const activeCount = contacts.filter((contact) => contact.status === 'Active').length;
+  const leadCount = contacts.filter((contact) => contact.status === 'Lead').length;
+  const uniqueCompanies = new Set(contacts.map((contact) => contact.company)).size;
 
   const handleAddContact = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +162,31 @@ export function Contacts() {
           <Plus className="w-4 h-4" />
           Add Contact
         </button>
+      </div>
+
+      {uiMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">{uiMessage}</div>
+          <button onClick={() => setUiMessage(null)} className="opacity-80 hover:opacity-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total contacts</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{contacts.length}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active / Leads</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{activeCount} / {leadCount}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Companies</div>
+          <div className="mt-2 text-2xl font-bold text-blue-700">{uniqueCompanies}</div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -253,7 +282,7 @@ export function Contacts() {
                   <td className="px-6 py-4 text-slate-500">{contact.lastContact}</td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={(e) => { e.stopPropagation(); alert('More options coming soon!'); }}
+                      onClick={(e) => { e.stopPropagation(); setUiMessage(`More actions for ${contact.name} are coming soon.`); }}
                       className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <MoreVertical className="w-4 h-4" />
@@ -454,7 +483,7 @@ export function Contacts() {
                             <p className="text-xs text-slate-500 mt-0.5">{doc.type} • {doc.size} • Added {doc.date}</p>
                           </div>
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); alert('Document downloaded!'); }}
+                        <button onClick={(e) => { e.stopPropagation(); setUiMessage(`Download started for ${doc.name}.`); }}
                           className="p-2 text-slate-400 hover:text-[#0097b2] hover:bg-[#0097b2]/10 rounded-lg transition-colors">
                           <Download className="w-4 h-4" />
                         </button>

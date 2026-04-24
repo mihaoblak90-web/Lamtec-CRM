@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Mail, Phone, Building2, ChevronRight, ArrowLeft, Plus, X, Folder, FileText, Calendar, Users, FolderPlus } from 'lucide-react';
 import { companiesData, type Person, type CompanyOrg } from '../lib/mockData';
 import { cn } from '../lib/utils';
@@ -33,6 +33,8 @@ const OrgNode: React.FC<{ person: Person, isLast?: boolean }> = ({ person, isLas
 export function OrgChart() {
   const [companies, setCompanies] = useState(companiesData);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [companySearch, setCompanySearch] = useState('');
+  const [uiMessage, setUiMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'org' | 'documents'>('org');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', industry: '' });
@@ -137,6 +139,13 @@ export function OrgChart() {
   };
 
   const meetingMinutes = useAppStore(state => state.meetingMinutes);
+  const companiesEntries = useMemo(
+    () => (Object.entries(companies) as [string, CompanyOrg][]).filter(([, company]) =>
+      company.name.toLowerCase().includes(companySearch.toLowerCase()) ||
+      company.industry.toLowerCase().includes(companySearch.toLowerCase()),
+    ),
+    [companies, companySearch],
+  );
 
   if (selectedCompanyId && companies[selectedCompanyId]) {
     const company = companies[selectedCompanyId];
@@ -307,15 +316,15 @@ export function OrgChart() {
                           </p>
                         </div>
                       </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          alert('View document coming soon!');
-                        }}
-                        className="px-3 py-1.5 text-sm font-medium text-[#0097b2] hover:bg-[#0097b2]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        View
-                      </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingDocument(doc);
+                      }}
+                      className="px-3 py-1.5 text-sm font-medium text-[#0097b2] hover:bg-[#0097b2]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      View
+                    </button>
                     </div>
                   ))}
                   {currentFolderContents.length === 0 && (
@@ -528,8 +537,8 @@ export function OrgChart() {
                     <p className="text-sm text-slate-500 max-w-sm mb-6">
                       This is a mock file upload. In a real application, this would display a preview of the uploaded {viewingDocument.name} file.
                     </p>
-                    <button 
-                      onClick={() => alert('File downloaded successfully!')}
+                    <button
+                      onClick={() => setUiMessage(`Download started for ${viewingDocument.name}.`)}
                       className="px-4 py-2 bg-[#0097b2] text-white rounded-lg text-sm font-medium hover:bg-[#005b7f] transition-colors"
                     >
                       Download File
@@ -560,8 +569,48 @@ export function OrgChart() {
         </button>
       </div>
 
+      {uiMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">{uiMessage}</div>
+          <button
+            onClick={() => setUiMessage(null)}
+            className="opacity-80 hover:opacity-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Companies</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{companiesEntries.length}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total contacts</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">
+            {companiesEntries.reduce((sum, [, c]) => sum + c.purchasing.length + c.development.length, 0)}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Linked meeting minutes</div>
+          <div className="mt-2 text-2xl font-bold text-blue-700">{meetingMinutes.length}</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <input
+          type="text"
+          value={companySearch}
+          onChange={(e) => setCompanySearch(e.target.value)}
+          placeholder="Search companies or industries..."
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2]"
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(Object.entries(companies) as [string, CompanyOrg][]).map(([id, company]) => (
+        {companiesEntries.map(([id, company]) => (
           <button
             key={id}
             onClick={() => setSelectedCompanyId(id)}
@@ -579,6 +628,11 @@ export function OrgChart() {
             <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#0097b2] transition-colors" />
           </button>
         ))}
+        {companiesEntries.length === 0 && (
+          <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            No organizations found for this search.
+          </div>
+        )}
       </div>
 
       {/* Add Customer Modal */}
