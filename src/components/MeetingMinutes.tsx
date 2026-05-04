@@ -17,7 +17,7 @@ import { useAppStore, type MeetingMinute } from '../lib/store';
 import { generateId } from '../lib/id';
 
 type VisitOption = {
-  id: number;
+  id: string | number;
   title: string;
   company: string;
   date: string;

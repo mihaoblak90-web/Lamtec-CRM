@@ -212,33 +212,38 @@ export function Deals() {
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws) as any[];
+        const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
-        const importedDeals: Deal[] = data.map((row, index) => ({
-          id: Number(row.id) || Date.now() + index,
-          title: row.title || 'Unknown Deal',
-          company: row.company || 'Unknown Company',
-          segment: row.segment || 'Automotive',
-          stage: stageOrder.includes((row.stage as string)?.toLowerCase() as (typeof stageOrder)[number])
-            ? (row.stage as string).toLowerCase()
-            : 'lead',
-          probability: Number(row.probability) || 0,
-          rfqNumber: row.rfqNumber || '',
-          rfqDate: row.rfqDate || '',
-          responsibleSales: row.responsibleSales || '',
-          responsibleRnD: row.responsibleRnD || '',
-          peakYearQuantity: Number(row.peakYearQuantity) || 0,
-          peakYearSales: Number(row.peakYearSales) || 0,
-          hidriaInvestment: Number(row.hidriaInvestment) || 0,
-          customerOrderEquip: Number(row.customerOrderEquip) || 0,
-          totalProjectValue: Number(row.totalProjectValue) || 0,
-          offerDueDate: row.offerDueDate || '',
-          offerNumber: row.offerNumber || '',
-          offerDate: row.offerDate || '',
-          nextStep: row.nextStep || '',
-          nextStepOwner: row.nextStepOwner || '',
-          nextStepDueDate: row.nextStepDueDate || ''
-        }));
+        const importedDeals: Deal[] = data.map((row, index) => {
+          const stageCandidate = String(row.stage || '').toLowerCase();
+          const normalizedStage = stageOrder.includes(stageCandidate as (typeof stageOrder)[number])
+            ? stageCandidate
+            : 'lead';
+
+          return {
+            id: Number(row.id) || Date.now() + index,
+            title: String(row.title || 'Unknown Deal'),
+            company: String(row.company || 'Unknown Company'),
+            segment: String(row.segment || 'Automotive'),
+            stage: normalizedStage,
+            probability: Number(row.probability) || 0,
+            rfqNumber: String(row.rfqNumber || ''),
+            rfqDate: String(row.rfqDate || ''),
+            responsibleSales: String(row.responsibleSales || ''),
+            responsibleRnD: String(row.responsibleRnD || ''),
+            peakYearQuantity: Number(row.peakYearQuantity) || 0,
+            peakYearSales: Number(row.peakYearSales) || 0,
+            hidriaInvestment: Number(row.hidriaInvestment) || 0,
+            customerOrderEquip: Number(row.customerOrderEquip) || 0,
+            totalProjectValue: Number(row.totalProjectValue) || 0,
+            offerDueDate: String(row.offerDueDate || ''),
+            offerNumber: String(row.offerNumber || ''),
+            offerDate: String(row.offerDate || ''),
+            nextStep: String(row.nextStep || ''),
+            nextStepOwner: String(row.nextStepOwner || ''),
+            nextStepDueDate: String(row.nextStepDueDate || ''),
+          };
+        });
 
         setDeals(prevDeals => {
           const newDeals = [...prevDeals];
