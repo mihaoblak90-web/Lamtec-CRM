@@ -17,6 +17,7 @@ import {
 import * as XLSX from 'xlsx';
 import { cn } from '../lib/utils';
 import { initialDealsData, Deal } from '../lib/mockData';
+import { readJsonFromStorage, writeJsonToStorage } from '../lib/storage';
 
 const stageOrder = ['lead', 'qualified', 'proposal', 'negotiation', 'won'] as const;
 
@@ -178,20 +179,14 @@ export function Deals() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DEALS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Deal[];
-      if (Array.isArray(parsed) && parsed.length) {
-        setDeals(parsed);
-      }
-    } catch {
-      setDeals(initialDealsData);
+    const storedDeals = readJsonFromStorage<Deal[]>(DEALS_STORAGE_KEY, []);
+    if (Array.isArray(storedDeals) && storedDeals.length) {
+      setDeals(storedDeals);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(DEALS_STORAGE_KEY, JSON.stringify(deals));
+    writeJsonToStorage(DEALS_STORAGE_KEY, deals);
   }, [deals]);
 
   const handleExportExcel = () => {

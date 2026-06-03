@@ -22,6 +22,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useAppStore, type MeetingMinute } from '../lib/store';
 import { generateId } from '../lib/id';
+import { readJsonFromStorage, writeJsonToStorage } from '../lib/storage';
 
 type Visit = {
   id: string | number;
@@ -46,8 +47,10 @@ const initialVisits: Visit[] = [
   { id: 5, title: 'Initial Plant Tour', company: 'Denso', location: 'Hidria HQ, Slovenia', date: `${currentYear - 1}-09-28`, time: '09:00 - 15:00', attendees: ['Taro Tanaka', 'Mike Ross'], type: 'Tour', coordinates: [46.0289, 14.0222] },
 ];
 
+type LeafletDefaultIconPrototype = L.Icon.Default & { _getIconUrl?: () => string };
+
 // Fix for default marker icon in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -55,6 +58,13 @@ L.Icon.Default.mergeOptions({
 });
 
 const formatIcsDate = (date: Date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+const escapeIcsText = (value: string) =>
+  value
+    .replace(/\\/g, '\\\\')
+    .replace(/\r?\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
 
 const parseVisitDateTime = (visit: Visit) => {
   const [startRaw, endRaw] = visit.time.split('-').map((part) => part.trim());
@@ -98,9 +108,9 @@ const buildIcsFile = (visits: Visit[]) => {
         `DTSTAMP:${formatIcsDate(new Date())}`,
         `DTSTART:${formatIcsDate(start)}`,
         `DTEND:${formatIcsDate(end)}`,
-        `SUMMARY:${visit.title} (${visit.company})`,
-        `LOCATION:${visit.location}`,
-        `DESCRIPTION:Type: ${visit.type}\\nAttendees: ${visit.attendees.join(', ')}`,
+        `SUMMARY:${escapeIcsText(`${visit.title} (${visit.company})`)}`,
+        `LOCATION:${escapeIcsText(visit.location)}`,
+        `DESCRIPTION:${escapeIcsText(`Type: ${visit.type}\nAttendees: ${visit.attendees.join(', ')}`)}`,
         'END:VEVENT',
       ].join('\r\n');
     })
@@ -123,7 +133,9 @@ const downloadIcs = (fileName: string, visits: Visit[]) => {
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
 
@@ -154,21 +166,14 @@ export function CalendarView() {
   });
 
   useEffect(() => {
-    const storedVisits = localStorage.getItem(STORAGE_KEY);
-    if (storedVisits) {
-      try {
-        const parsed = JSON.parse(storedVisits) as Visit[];
-        if (Array.isArray(parsed) && parsed.length) {
-          setAllVisits(parsed);
-        }
-      } catch {
-        setAllVisits(initialVisits);
-      }
+    const storedVisits = readJsonFromStorage<Visit[]>(STORAGE_KEY, []);
+    if (Array.isArray(storedVisits) && storedVisits.length) {
+      setAllVisits(storedVisits);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allVisits));
+    writeJsonToStorage(STORAGE_KEY, allVisits);
   }, [allVisits]);
 
   const upcomingVisits = useMemo(

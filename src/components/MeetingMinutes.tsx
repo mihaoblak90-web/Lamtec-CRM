@@ -15,6 +15,7 @@ import {
 import { cn } from '../lib/utils';
 import { useAppStore, type MeetingMinute } from '../lib/store';
 import { generateId } from '../lib/id';
+import { readJsonFromStorage } from '../lib/storage';
 
 type VisitOption = {
   id: string | number;
@@ -53,17 +54,8 @@ export function MeetingMinutes() {
 
   useEffect(() => {
     const loadVisits = () => {
-      try {
-        const raw = localStorage.getItem(VISITS_STORAGE_KEY);
-        if (!raw) {
-          setAvailableVisits([]);
-          return;
-        }
-        const parsed = JSON.parse(raw) as VisitOption[];
-        setAvailableVisits(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        setAvailableVisits([]);
-      }
+      const parsed = readJsonFromStorage<VisitOption[]>(VISITS_STORAGE_KEY, []);
+      setAvailableVisits(Array.isArray(parsed) ? parsed : []);
     };
 
     loadVisits();
